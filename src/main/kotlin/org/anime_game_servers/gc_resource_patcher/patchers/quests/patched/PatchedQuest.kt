@@ -10,21 +10,21 @@ import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestEx
 @Serializable
 data class PatchedQuest(
     val mainId: Int,
-    val series: Int? = -1,
-    val type: String? = null,
+    var series: Int = -1,
+    var type: String? = null,
 
-    val luaPath: String? = null,
-    val repeatable: Boolean? = null,
-    val suggestTrackOutOfOrder: Boolean? = null,
-    val suggestTrackMainQuestList: List<Int>? = null,
-    val rewardIdList: List<Int>? = null,
-    val subQuests: List<PatchSubQuest>? = null,
-    val talks: List<TalkDataBinout>? = null,
+    var luaPath: String? = null,
+    var repeatable: Boolean? = null,
+    var suggestTrackOutOfOrder: Boolean? = null,
+    var suggestTrackMainQuestList: List<Int>? = null,
+    var rewardIdList: List<Int>? = null,
+    var subQuests: List<PatchSubQuest>? = null,
+    var talks: List<TalkDataBinout>? = null,
 
 
     // Textmaps
-    val titleTextMapHash: Long = -1,
-    val descTextMapHash: Long = -1,
+    var titleTextMapHash: Long = -1,
+    var descTextMapHash: Long = -1,
 
     ) {
 
@@ -32,38 +32,38 @@ data class PatchedQuest(
     data class PatchSubQuest(
         val subId: Int,
         val mainId: Int = -1,
-        val order: Int = -1,
-        val showType: String? = null,
-        val finishParent: Boolean? = null,
-        val isRewind: Boolean? = null,
+        var order: Int = -1,
+        var showType: String? = null,
+        var finishParent: Boolean? = null,
+        var isRewind: Boolean? = null,
 
-        val luaPath: String? = null,
-        val repeatable: Boolean? = null,
-        val suggestTrackOutOfOrder: Boolean? = null,
+        var luaPath: String? = null,
+        var repeatable: Boolean? = null,
+        var suggestTrackOutOfOrder: Boolean? = null,
 
-        val versionBegin: String? = null,
-        val versionEnd: String? = null,
+        var versionBegin: String? = null,
+        var versionEnd: String? = null,
 
         // quest conditions
-        val acceptCondComb: String? = null,
-        val acceptCond: List<QuestCondition>? = null,
-        val finishCondComb: String? = null,
-        val finishCond: List<QuestCondition>? = null,
-        val failCondComb: String? = null,
-        val failCond: List<QuestCondition>? = null,
+        var acceptCondComb: String? = null,
+        var acceptCond: List<QuestCondition>? = null,
+        var finishCondComb: String? = null,
+        var finishCond: List<QuestCondition>? = null,
+        var failCondComb: String? = null,
+        var failCond: List<QuestCondition>? = null,
 
 
         // quest execs
-        val beginExec: List<QuestExec>? = null,
-        val finishExec: List<QuestExec>? = null,
-        val failExec: List<QuestExec>? = null,
+        var beginExec: List<QuestExec>? = null,
+        var finishExec: List<QuestExec>? = null,
+        var failExec: List<QuestExec>? = null,
 
-        val gainItems: List<GainItem>? = null,
+        var gainItems: List<GainItem>? = null,
 
 
         // Textmaps
-        val descTextMapHash: Long = -1,
-        val stepDescTextMapHash: Long = -1,
+        var descTextMapHash: Long = -1,
+        var stepDescTextMapHash: Long = -1,
     )
 
     @Serializable
