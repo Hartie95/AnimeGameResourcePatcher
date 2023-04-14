@@ -10,14 +10,25 @@ import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestEx
 @Serializable
 data class PatchedQuest(
     val mainId: Int,
+    var collectionId:Int = -1,
     var series: Int = -1,
+    var chapterId: Int = -1,
     var type: String? = null,
 
     var luaPath: String? = null,
     var repeatable: Boolean? = null,
+    var recommendedLevel: Int = -1,
+    var showType: String? = null,
     var suggestTrackOutOfOrder: Boolean? = null,
     var suggestTrackMainQuestList: List<Int>? = null,
     var rewardIdList: List<Int>? = null,
+    var activityId: Int = -1,
+    var taskId: Int = -1,
+    var videoKey: Long = -1,
+
+    var activeMode: String?= null,
+    var mainQuestTag: String? = null,
+
     var subQuests: List<PatchSubQuest>? = null,
     var talks: List<TalkDataBinout>? = null,
 

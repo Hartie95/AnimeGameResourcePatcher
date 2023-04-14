@@ -1,6 +1,7 @@
 package org.anime_game_servers.gc_resource_patcher.patchers.quests.binout
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestCondition
@@ -9,16 +10,27 @@ import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestEx
 @Serializable
 data class BinoutQuest(
     val id: Int,
-    //TODO is ICLLDPJFIMA also series?
+    // e.g. ICLLDPJFIMA
+    val collectionId: Int = -1,
     val series: Int = -1,
+    val chapterId: Int = -1,
     val type: String? = null,
 
 
     val luaPath: String? = null,
+    @SerialName("recommendLevel")
+    val recommendedLevel: Int = -1,
+    val showType: String? = null,
     val repeatable: Boolean? = null,
     val suggestTrackOutOfOrder: Boolean? = null,
     val suggestTrackMainQuestList: List<Int>? = null,
     val rewardIdList: List<Int>? = null,
+    val activeMode: String?= null,
+    val activityId: Int = -1,
+    val mainQuestTag: String? = null,
+    val showRedPoint: Boolean? = null,
+    val taskId: Int = -1,
+
     val subQuests: List<BinoutSubQuest>? = null,
     val talks: List<TalkDataBinout>? = null,
 

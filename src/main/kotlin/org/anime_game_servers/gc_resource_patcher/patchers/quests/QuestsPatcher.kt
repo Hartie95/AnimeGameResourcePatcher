@@ -121,7 +121,6 @@ object QuestsPatcher {
             println(it.toString())
         }
 
-        // TODO write generated Quests to files in outputFolder with the name generatedQuests[mainId].id.json
         generatedQuests.forEach { (key, value) ->
             File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(PatchedQuest.serializer(), value))
         }
@@ -131,14 +130,17 @@ object QuestsPatcher {
         excelMainQuest.type?.let {
             this.type = it
         }
-        excelMainQuest.activeMode?.let {
-            // TODO
+        excelMainQuest.collectionId.ifIsSet {
+            this.collectionId = it
         }
         excelMainQuest.luaPath?.let {
             this.luaPath = it
         }
         excelMainQuest.repeatable?.let {
             this.repeatable = it
+        }
+        excelMainQuest.recommendedLevel.ifIsSet {
+            this.recommendedLevel = it
         }
         excelMainQuest.suggestTrackMainQuestList?.let {
             this.suggestTrackMainQuestList = it
@@ -147,7 +149,22 @@ object QuestsPatcher {
             this.rewardIdList = it
         }
         excelMainQuest.showType?.let {
-            // todo
+            this.showType = it
+        }
+        excelMainQuest.activeMode?.let {
+            this.activeMode = it
+        }
+        excelMainQuest.mainQuestTag?.let {
+            this.mainQuestTag = it
+        }
+        excelMainQuest.activityId.ifIsSet {
+            this.activityId = it
+        }
+        excelMainQuest.chapterId.ifIsSet {
+            this.chapterId = it
+        }
+        excelMainQuest.taskID.ifIsSet {
+            this.taskId = it
         }
         excelMainQuest.descTextMapHash.ifIsSet {
             this.descTextMapHash = it
@@ -160,53 +177,77 @@ object QuestsPatcher {
         txtMainQuest.series.ifIsSet {
             this.series = it
         }
-        txtMainQuest.taskGroup.ifIsSet {
-            // todo
+        txtMainQuest.collectionId.ifIsSet {
+            this.collectionId = it
         }
-        txtMainQuest.taskType.ifIsSet {
-            // todo
+        txtMainQuest.getTaskTypeString()?.let {
+            this.type = it
         }
-        txtMainQuest.enableMode.ifIsSet {
-            // todo
+        txtMainQuest.getActiveModeString()?.let {
+            this.activeMode = it
         }
         txtMainQuest.luaPath?.let {
             this.luaPath = it
         }
         txtMainQuest.recommendedLevel.ifIsSet {
-            // todo
+            this.recommendedLevel = it
         }
-        txtMainQuest.repeatable.ifIsSet {
-            // this.repeatable = it //TODO
+        txtMainQuest.getRepeatableBool()?.let {
+            this.repeatable = it
         }
         txtMainQuest.getRewardIdList()?.let {
             this.rewardIdList = it
         }
         txtMainQuest.chapterId.ifIsSet {
-            // todo
+            this.chapterId = it
         }
-        txtMainQuest.eventId.ifIsSet {
-            // todo
+        txtMainQuest.taskId.ifIsSet {
+            this.taskId = it
         }
-        txtMainQuest.activityId?.let {
-            // todo
+        txtMainQuest.activityId.ifIsSet {
+            this.activityId = it
         }
         txtMainQuest.activityType.ifIsSet {
             // todo
         }
-        txtMainQuest.videoKey?.let {
-            // todo
+        txtMainQuest.videoKey.ifIsSet {
+            this.videoKey = it
         }
     }
 
     private fun PatchedQuest.merge(binoutMainQuest: BinoutQuest){
+        binoutMainQuest.collectionId.ifIsSet {
+            this.collectionId = it
+        }
         binoutMainQuest.series.ifIsSet {
             this.series = it
+        }
+        binoutMainQuest.chapterId.ifIsSet {
+            this.chapterId = it
         }
         binoutMainQuest.type?.let {
             this.type = it
         }
         binoutMainQuest.luaPath?.let {
             this.luaPath = it
+        }
+        binoutMainQuest.recommendedLevel.ifIsSet {
+            this.recommendedLevel = it
+        }
+        binoutMainQuest.showType?.let {
+            this.showType = it
+        }
+        binoutMainQuest.activeMode?.let {
+            this.activeMode = it
+        }
+        binoutMainQuest.activityId.ifIsSet {
+            this.activityId = it
+        }
+        binoutMainQuest.mainQuestTag?.let {
+            this.mainQuestTag = it
+        }
+        binoutMainQuest.taskId.ifIsSet {
+            this.taskId = it
         }
         binoutMainQuest.repeatable?.let {
             this.repeatable = it
@@ -231,8 +272,14 @@ object QuestsPatcher {
         }
     }
     private fun PatchedQuest.merge(patchedQuest: PatchedQuest){
+        patchedQuest.collectionId.ifIsSet {
+            this.collectionId = it
+        }
         patchedQuest.series.ifIsSet {
             this.series = it
+        }
+        patchedQuest.chapterId.ifIsSet {
+            this.chapterId = it
         }
         patchedQuest.type?.let {
             this.type = it
@@ -243,6 +290,18 @@ object QuestsPatcher {
         patchedQuest.repeatable?.let {
             this.repeatable = it
         }
+        patchedQuest.recommendedLevel.ifIsSet {
+            this.recommendedLevel = it
+        }
+        patchedQuest.showType?.let {
+            this.showType = it
+        }
+        patchedQuest.activeMode?.let {
+            this.activeMode = it
+        }
+        patchedQuest.mainQuestTag?.let {
+            this.mainQuestTag = it
+        }
         patchedQuest.suggestTrackOutOfOrder?.let {
             this.suggestTrackOutOfOrder = it
         }
@@ -251,6 +310,21 @@ object QuestsPatcher {
         }
         patchedQuest.rewardIdList?.let {
             this.rewardIdList = it
+        }
+        patchedQuest.activityId.ifIsSet {
+            this.activityId = it
+        }
+        patchedQuest.taskId.ifIsSet {
+            this.taskId = it
+        }
+        patchedQuest.videoKey.ifIsSet {
+            this.videoKey = it
+        }
+        patchedQuest.activeMode?.let {
+            this.activeMode = it
+        }
+        patchedQuest.mainQuestTag?.let {
+            this.mainQuestTag = it
         }
         patchedQuest.talks?.let {
             this.talks = it
