@@ -31,7 +31,9 @@ data class QuestGuide(
     val type: String? = null,
     @JsonNames("param", "_param")
     val param: List<String>? = null,
-    val guideScene: Int = -1
+    val guideScene: Int = -1,
+    val guideStyle: String? = null,
+    val guideLayer: String? = null
 )
 
 @Serializable

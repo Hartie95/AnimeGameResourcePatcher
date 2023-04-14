@@ -117,11 +117,8 @@ object QuestsPatcher {
             generatedQuests[mainId] = mainQuest
         }
 
-        generatedQuests.forEach {
-            println(it.toString())
-        }
-
         generatedQuests.forEach { (key, value) ->
+            println(value.toString())
             File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(PatchedQuest.serializer(), value))
         }
     }
@@ -337,15 +334,22 @@ object QuestsPatcher {
         }
     }
 
+    // subquests
     private fun PatchedQuest.PatchSubQuest.merge(excelQuest:ExcelSubQuest){
         excelQuest.order.ifIsSet {
             this.order = it
+        }
+        excelQuest.isMpBlock?.let {
+            this.isMpBlock = it
         }
         excelQuest.isRewind?.let {
             this.isRewind = it
         }
         excelQuest.finishParent?.let {
             this.finishParent = it
+        }
+        excelQuest.showType?.let {
+            this.showType = it
         }
 
         excelQuest.acceptCondComb?.let {
@@ -377,28 +381,31 @@ object QuestsPatcher {
             this.failExec = it
         }
         excelQuest.guide?.let {
-            //todo
+            this.guide = it
+        }
+        excelQuest.showGuide?.let {
+            this.showGuide = it
         }
         excelQuest.banType?.let {
-            //todo
+            this.banType = it
         }
         excelQuest.exclusiveNpcList?.let {
-            //todo
+            this.exclusiveNpcList = it
         }
         excelQuest.exclusiveNpcPriority.ifIsSet {
-            //todo
+            this.exclusiveNpcPriority = it
         }
         excelQuest.sharedNpcList?.let {
-            //todo
+            this.sharedNpcList = it
         }
         excelQuest.trialAvatarList?.let {
-            //todo
+            this.trialAvatarList = it
         }
         excelQuest.exclusivePlaceList?.let {
-            //todo
+            this.exclusivePlaceList = it
         }
         excelQuest.guide?.let {
-            //todo
+            this.guide = it
         }
         excelQuest.descTextMapHash.ifIsSet {
             this.descTextMapHash = it
@@ -407,13 +414,16 @@ object QuestsPatcher {
             this.stepDescTextMapHash = it
         }
         excelQuest.guideTipsTextMapHash.ifIsSet {
-            //todo
+            this.guideTipsTextMapHash = it
         }
 
     }
     private fun PatchedQuest.PatchSubQuest.merge(binoutQuest:BinoutQuest.BinoutSubQuest){
         binoutQuest.order.ifIsSet {
             this.order = it
+        }
+        binoutQuest.isMpBlock?.let {
+            this.isMpBlock = it
         }
         binoutQuest.showType?.let {
             this.showType = it
@@ -433,12 +443,19 @@ object QuestsPatcher {
         binoutQuest.suggestTrackOutOfOrder?.let {
             this.suggestTrackOutOfOrder = it
         }
+        binoutQuest.trialAvatarList?.let {
+            this.trialAvatarList = it
+        }
+        binoutQuest.exclusivePlaceList?.let {
+            this.exclusivePlaceList = it
+        }
         binoutQuest.versionBegin?.let {
             this.versionBegin = it
         }
         binoutQuest.versionEnd?.let {
             this.versionEnd = it
         }
+
         binoutQuest.acceptCondComb?.let {
             this.acceptCondComb = it
         }
@@ -466,6 +483,24 @@ object QuestsPatcher {
         binoutQuest.failExec?.let {
             this.failExec = it
         }
+        binoutQuest.guide?.let {
+            this.guide = it
+        }
+        binoutQuest.showGuide?.let {
+            this.showGuide = it
+        }
+        binoutQuest.banType?.let {
+            this.banType = it
+        }
+        binoutQuest.exclusiveNpcList?.let {
+            this.exclusiveNpcList = it
+        }
+        binoutQuest.exclusiveNpcPriority.ifIsSet {
+            this.exclusiveNpcPriority = it
+        }
+        binoutQuest.sharedNpcList?.let {
+            this.sharedNpcList = it
+        }
         binoutQuest.descTextMapHash.ifIsSet {
             this.descTextMapHash = it
         }
@@ -473,9 +508,13 @@ object QuestsPatcher {
             this.stepDescTextMapHash = it
         }
     }
+
     private fun PatchedQuest.PatchSubQuest.merge(patchSubQuest:PatchedQuest.PatchSubQuest){
         patchSubQuest.order.ifIsSet {
             this.order = it
+        }
+        patchSubQuest.isMpBlock?.let {
+            this.isMpBlock = it
         }
         patchSubQuest.showType?.let {
             this.showType = it
@@ -494,6 +533,12 @@ object QuestsPatcher {
         }
         patchSubQuest.suggestTrackOutOfOrder?.let {
             this.suggestTrackOutOfOrder = it
+        }
+        patchSubQuest.trialAvatarList?.let {
+            this.trialAvatarList = it
+        }
+        patchSubQuest.exclusivePlaceList?.let {
+            this.exclusivePlaceList = it
         }
         patchSubQuest.versionBegin?.let {
             this.versionBegin = it
@@ -530,6 +575,24 @@ object QuestsPatcher {
         }
         patchSubQuest.gainItems?.let {
             this.gainItems = it
+        }
+        patchSubQuest.guide?.let {
+            this.guide = it
+        }
+        patchSubQuest.showGuide?.let {
+            this.showGuide = it
+        }
+        patchSubQuest.banType?.let {
+            this.banType = it
+        }
+        patchSubQuest.exclusiveNpcList?.let {
+            this.exclusiveNpcList = it
+        }
+        patchSubQuest.exclusiveNpcPriority.ifIsSet {
+            this.exclusiveNpcPriority = it
+        }
+        patchSubQuest.sharedNpcList?.let {
+            this.sharedNpcList = it
         }
         patchSubQuest.descTextMapHash.ifIsSet {
             this.descTextMapHash = it

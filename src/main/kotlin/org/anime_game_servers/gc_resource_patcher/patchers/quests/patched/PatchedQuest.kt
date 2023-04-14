@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonNames
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.GainItem
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestCondition
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestExec
+import org.anime_game_servers.gc_resource_patcher.patchers.quests.shared.QuestGuide
 
 @Serializable
 data class PatchedQuest(
@@ -44,6 +45,7 @@ data class PatchedQuest(
         val subId: Int,
         val mainId: Int = -1,
         var order: Int = -1,
+        var isMpBlock: Boolean? = null,
         var showType: String? = null,
         var finishParent: Boolean? = null,
         var isRewind: Boolean? = null,
@@ -51,6 +53,7 @@ data class PatchedQuest(
         var luaPath: String? = null,
         var repeatable: Boolean? = null,
         var suggestTrackOutOfOrder: Boolean? = null,
+        var trialAvatarList: List<Int>? = null,
 
         var versionBegin: String? = null,
         var versionEnd: String? = null,
@@ -69,12 +72,21 @@ data class PatchedQuest(
         var finishExec: List<QuestExec>? = null,
         var failExec: List<QuestExec>? = null,
 
+
         var gainItems: List<GainItem>? = null,
+        var guide: QuestGuide? = null,
+        var showGuide: String? = null,
+        var banType: String? = null,
+        var exclusiveNpcList: List<Int>? = null,
+        var exclusiveNpcPriority: Int = -1,
+        var sharedNpcList: List<Int>? = null,
+        var exclusivePlaceList: List<Int>? = null,
 
 
         // Textmaps
         var descTextMapHash: Long = -1,
         var stepDescTextMapHash: Long = -1,
+        var guideTipsTextMapHash: Long = -1,
     )
 
     @Serializable

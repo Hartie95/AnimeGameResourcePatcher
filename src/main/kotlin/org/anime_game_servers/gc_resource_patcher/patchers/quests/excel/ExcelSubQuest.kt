@@ -10,8 +10,10 @@ data class ExcelSubQuest(
     val subId: Int,
     val mainId: Int = -1,
     val order: Int = -1,
+    val isMpBlock: Boolean? = null,
     val isRewind: Boolean? = null,
     val finishParent: Boolean? = null,
+    val showType: String? = null,
 
     // quest conditions
     val acceptCondComb: String? = null,
@@ -28,6 +30,7 @@ data class ExcelSubQuest(
 
 
     val guide: QuestGuide? = null,
+    val showGuide: String? = null,
     val banType: String? = null,
     val exclusiveNpcList: List<Int>? = null,
     val exclusiveNpcPriority: Int = -1,
