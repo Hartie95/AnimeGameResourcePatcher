@@ -189,7 +189,7 @@ object QuestsPatcher {
             val isNulleable = parameter.type.isMarkedNullable
             val propertyClass = property.returnType.classifier as KClass<*>
             if(propertyClass == List::class){
-                getListValue(property as KProperty1<T, List<*>>, other, this)
+                getListValue(property as KProperty1<T, List<*>?>, other, this)
             } else if(propertyClass == Int::class)
                 getIntValue(property as KProperty1<T, Int>, other, this)
             else if(propertyClass == Long::class)
@@ -227,7 +227,7 @@ object QuestsPatcher {
         }
         return mainVal
     }
-    fun <T : Any> getListValue(property:KProperty1<T, List<*>>,other: T, main: T): List<*>?{
+    fun <T : Any> getListValue(property:KProperty1<T, List<*>?>,other: T, main: T): List<*>?{
         val mainVal = property.get(main)
         val otherVal = property.get(other)
         if(mainVal==null){
@@ -274,10 +274,11 @@ object QuestsPatcher {
         }
 
 
-        val newList = mutableListOf<Any>()
+        return otherVal
+        /*val newList = mutableListOf<Any>()
         newList.addAll(mainVal as Collection<Any>)
         newList.addAll(otherVal as Collection<Any>)
-        return newList
+        return newList*/
     }
 
     fun Int.ifIsSet(function:(Int)->Unit){

@@ -3,6 +3,7 @@ package org.anime_game_servers.gc_resource_patcher.data.talks
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
+import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
 
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
@@ -59,7 +60,9 @@ data class TalkData(
     val talkMarkHideList: List<Int>? = null,
     @JsonNames("extraLoadMarkId", "_extraLoadMarkId") // talks  don't appear in the referenced quests in binout
     val extraLoadMarkId: List<Int>? = null,
-    )
+    ) : IntKey {
+    override fun getIntKey() = id
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 @Serializable
