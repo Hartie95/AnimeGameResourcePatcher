@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.8.0"
-    kotlin("plugin.serialization") version "1.5.0"
+    kotlin("jvm") version "1.8.21"
+    kotlin("plugin.serialization") version "1.8.21"
     application
 }
 
@@ -13,8 +13,10 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("app.softwork:kotlinx-serialization-csv:0.0.13")
+
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.21")
 }
 
 tasks.test {

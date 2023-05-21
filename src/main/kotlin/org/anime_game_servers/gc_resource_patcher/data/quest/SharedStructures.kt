@@ -1,8 +1,10 @@
-package org.anime_game_servers.gc_resource_patcher.patchers.quests.shared
+package org.anime_game_servers.gc_resource_patcher.data.quest
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonNames
+import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
+import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
 
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
@@ -13,7 +15,9 @@ data class QuestCondition(
     val paramString: String? = null,
     @JsonNames("param", "_param")
     val param: List<Int>? = null
-)
+) : StringKey {
+    override fun getStringKey() = (type ?: "")+(param?.getOrNull(0) ?: "")
+}
 
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
@@ -37,7 +41,9 @@ data class QuestGuide(
 )
 
 @Serializable
-data class GainItem(
+data class GainItem (
     val itemId: Int = -1,
     val count: Int = -1
-)
+) : IntKey{
+    override fun getIntKey() = itemId
+}

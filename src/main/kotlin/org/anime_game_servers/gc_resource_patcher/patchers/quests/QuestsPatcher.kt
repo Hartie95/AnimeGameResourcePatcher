@@ -5,14 +5,19 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.QuestsPatcher.ifIsSet
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.binout.BinoutQuest
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.excel.ExcelMainQuest
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.excel.ExcelSubQuest
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.patched.PatchedQuest
+import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
+import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
+import org.anime_game_servers.gc_resource_patcher.data.quest.MainQuestData
+import org.anime_game_servers.gc_resource_patcher.data.quest.SubQuestData
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.txt.TxtMainQuest
 import java.io.File
 import kotlin.io.path.Path
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.primaryConstructor
+import kotlin.reflect.full.starProjectedType
 
 @OptIn(ExperimentalSerializationApi::class)
 object QuestsPatcher {
@@ -75,12 +80,14 @@ object QuestsPatcher {
             mainSubIds.getOrPut(value.mainId) { mutableSetOf() }+=key
         }
 
-        val generatedQuests = mutableMapOf<Int, PatchedQuest>()
+        val generatedQuests = mutableMapOf<Int, MainQuestData>()
         mainIds.forEach {mainId ->
-            val mainQuest = PatchedQuest(mainId)
-            val subQuests = mutableMapOf<Int, PatchedQuest.PatchSubQuest>()
+
+            val subQuestsList = mutableListOf<SubQuestData>()
+            var mainQuest = MainQuestData(mainId, subQuests = subQuestsList)
+            val subQuests = mutableMapOf<Int, SubQuestData>()
             mainSubIds[mainId]?.forEach { subId->
-                val subQuest = PatchedQuest.PatchSubQuest(subId, mainId)
+                val subQuest = SubQuestData(subId, mainId)
 
                 excelSubQuestsOld?.get(subId)?.let {
                     subQuest.merge(it)
@@ -92,550 +99,172 @@ object QuestsPatcher {
                 subQuests[subId]=subQuest
             }
             excelMainQuests?.get(mainId)?.let {
-                mainQuest.merge(it)
+                mainQuest = mainQuest merge it
             }
-            txtMainQuests?.get(mainId)?.let {
-                mainQuest.merge(it)
-            }
+            /*txtMainQuests?.get(mainId)?.let {
+                mainQuest = mainQuest.merge(it)
+            }*/
 
 
             binoutQuests?.get(mainId)?.let {
-                mainQuest.merge(it)
+                mainQuest = mainQuest.merge(it)
                 it.subQuests?.forEach { subQuest ->
                     subQuests[subQuest.subId]?.merge(subQuest)
                 }
             }
 
             questsPatches?.get(mainId)?.let {
-                mainQuest.merge(it)
+                mainQuest = mainQuest.merge(it)
                 it.subQuests?.forEach { subQuest ->
                     subQuests[subQuest.subId]?.merge(subQuest)
                 }
             }
 
-            mainQuest.subQuests=subQuests.map { it.value }
+            subQuestsList.addAll(subQuests.map { it.value })
             generatedQuests[mainId] = mainQuest
         }
 
         generatedQuests.forEach { (key, value) ->
-            println(value.toString())
-            File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(PatchedQuest.serializer(), value))
+            //println(value.toString())
+            File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(MainQuestData.serializer(), value))
         }
     }
-
-    private fun PatchedQuest.merge(excelMainQuest: ExcelMainQuest){
-        excelMainQuest.type?.let {
-            this.type = it
+    inline infix fun <reified T : Any> T.merge(other: T): T {
+        var propertiesByName = T::class.declaredMemberProperties.associateBy { it.name }
+        val primaryConstructor = T::class.primaryConstructor
+            ?: run {
+                if(this!=null && this::class.primaryConstructor!=null){
+                    propertiesByName = this::class.declaredMemberProperties.associateBy { it.name } as Map<String, KProperty1<T, *>>
+                    return@run this::class.primaryConstructor!!
+                } else if(other!=null && other::class.primaryConstructor!=null){
+                    propertiesByName = other::class.declaredMemberProperties.associateBy { it.name } as Map<String, KProperty1<T, *>>
+                    return@run other::class.primaryConstructor!!
+                }
+                throw IllegalArgumentException("merge type must have a primary constructor ${T::class.simpleName}")
+            }
+        val args = primaryConstructor.parameters.associateWith { parameter ->
+            val property = propertiesByName[parameter.name]
+                ?: throw IllegalStateException("no declared member property found with name '${parameter.name}'")
+            val isNulleable = parameter.type.isMarkedNullable
+            val propertyClass = property.returnType.classifier as KClass<*>
+            if(propertyClass == List::class){
+                getListValue(property as KProperty1<T, List<*>>, other, this)
+            } else if(propertyClass == Int::class)
+                getIntValue(property as KProperty1<T, Int>, other, this)
+            else if(propertyClass == Long::class)
+                getLongValue(property as KProperty1<T, Long>, other, this)
+            else if(isNulleable){
+                (property.get(other) ?: property.get(this))
+            } else {
+                println("Unknown non null type ${propertyClass.simpleName}")
+                (property.get(other) ?: property.get(this))
+            }
         }
-        excelMainQuest.collectionId.ifIsSet {
-            this.collectionId = it
-        }
-        excelMainQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        excelMainQuest.repeatable?.let {
-            this.repeatable = it
-        }
-        excelMainQuest.recommendedLevel.ifIsSet {
-            this.recommendedLevel = it
-        }
-        excelMainQuest.suggestTrackMainQuestList?.let {
-            this.suggestTrackMainQuestList = it
-        }
-        excelMainQuest.rewardIdList?.let {
-            this.rewardIdList = it
-        }
-        excelMainQuest.showType?.let {
-            this.showType = it
-        }
-        excelMainQuest.activeMode?.let {
-            this.activeMode = it
-        }
-        excelMainQuest.mainQuestTag?.let {
-            this.mainQuestTag = it
-        }
-        excelMainQuest.activityId.ifIsSet {
-            this.activityId = it
-        }
-        excelMainQuest.chapterId.ifIsSet {
-            this.chapterId = it
-        }
-        excelMainQuest.taskID.ifIsSet {
-            this.taskId = it
-        }
-        excelMainQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
-        excelMainQuest.stepDescTextMapHash.ifIsSet {
-            // todo
-        }
-    }
-    private fun PatchedQuest.merge(txtMainQuest: TxtMainQuest){
-        txtMainQuest.series.ifIsSet {
-            this.series = it
-        }
-        txtMainQuest.collectionId.ifIsSet {
-            this.collectionId = it
-        }
-        txtMainQuest.getTaskTypeString()?.let {
-            this.type = it
-        }
-        txtMainQuest.getActiveModeString()?.let {
-            this.activeMode = it
-        }
-        txtMainQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        txtMainQuest.recommendedLevel.ifIsSet {
-            this.recommendedLevel = it
-        }
-        txtMainQuest.getRepeatableBool()?.let {
-            this.repeatable = it
-        }
-        txtMainQuest.getRewardIdList()?.let {
-            this.rewardIdList = it
-        }
-        txtMainQuest.chapterId.ifIsSet {
-            this.chapterId = it
-        }
-        txtMainQuest.taskId.ifIsSet {
-            this.taskId = it
-        }
-        txtMainQuest.activityId.ifIsSet {
-            this.activityId = it
-        }
-        txtMainQuest.activityType.ifIsSet {
-            // todo
-        }
-        txtMainQuest.videoKey.ifIsSet {
-            this.videoKey = it
-        }
+        return primaryConstructor.callBy(args)
     }
 
-    private fun PatchedQuest.merge(binoutMainQuest: BinoutQuest){
-        binoutMainQuest.collectionId.ifIsSet {
-            this.collectionId = it
-        }
-        binoutMainQuest.series.ifIsSet {
-            this.series = it
-        }
-        binoutMainQuest.chapterId.ifIsSet {
-            this.chapterId = it
-        }
-        binoutMainQuest.type?.let {
-            this.type = it
-        }
-        binoutMainQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        binoutMainQuest.recommendedLevel.ifIsSet {
-            this.recommendedLevel = it
-        }
-        binoutMainQuest.showType?.let {
-            this.showType = it
-        }
-        binoutMainQuest.activeMode?.let {
-            this.activeMode = it
-        }
-        binoutMainQuest.activityId.ifIsSet {
-            this.activityId = it
-        }
-        binoutMainQuest.mainQuestTag?.let {
-            this.mainQuestTag = it
-        }
-        binoutMainQuest.taskId.ifIsSet {
-            this.taskId = it
-        }
-        binoutMainQuest.repeatable?.let {
-            this.repeatable = it
-        }
-        binoutMainQuest.suggestTrackOutOfOrder?.let {
-            this.suggestTrackOutOfOrder = it
-        }
-        binoutMainQuest.suggestTrackMainQuestList?.let {
-            this.suggestTrackMainQuestList = it
-        }
-        binoutMainQuest.rewardIdList?.let {
-            this.rewardIdList = it
-        }
-        binoutMainQuest.talks?.let {
-            //this.talks = it //todo
-        }
-        binoutMainQuest.titleTextMapHash.ifIsSet {
-            this.titleTextMapHash = it
-        }
-        binoutMainQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
+
+    fun <T : Any> getIntValue(property:KProperty1<T, Int>,other: T, main: T): Int{
+        val otherVal = property.get(other)
+        if(otherVal != -1)
+            return otherVal
+        return property.get(main)
     }
-    private fun PatchedQuest.merge(patchedQuest: PatchedQuest){
-        patchedQuest.collectionId.ifIsSet {
-            this.collectionId = it
+    fun <T : Any> getLongValue(property:KProperty1<T, Long>,other: T, main: T): Long{
+        val otherVal = property.get(other)
+        if(otherVal != -1L)
+            return otherVal
+        return property.get(main)
+    }
+    fun <T : Any> getListValue(property:KProperty1<T, List<*>>,other: T, main: T): List<*>?{
+        val mainVal = property.get(main)
+        val otherVal = property.get(other)
+        if(mainVal==null){
+            return otherVal
+        } else if(otherVal==null){
+            return mainVal
         }
-        patchedQuest.series.ifIsSet {
-            this.series = it
+        //TODO merge logic
+        val listType = property.returnType.arguments.get(0).type
+        if(listType!=null && listType.isSubtypeOf(IntKey::class.starProjectedType)){
+            //TODO merge each element
+            val mainMap = (mainVal as List<IntKey>).associateBy { it.getIntKey() }
+            val otherMap = (otherVal as List<IntKey>).associateBy { it.getIntKey() }
+            val mergedMap = mainMap.toMutableMap()
+            val onlyOtherKeys = otherMap.keys - mainMap.keys
+            val onlyMainKeys = mainMap.keys - otherMap.keys
+            val bothKEys = otherMap.keys - onlyOtherKeys
+            onlyMainKeys.forEach { key ->
+                mergedMap[key] = mainMap[key]!!
+            }
+            onlyOtherKeys.forEach { key ->
+                mergedMap[key] = otherMap[key]!!
+            }
+            bothKEys.forEach { key ->
+                mergedMap[key] = mainMap[key]!!.merge(otherMap[key]!!)
+            }
+            return mergedMap.values.toList()
+        } else if(listType!=null && listType.isSubtypeOf(StringKey::class.starProjectedType)) {
+            //TODO merge each element
+            val mainMap = (mainVal as List<StringKey>).associateBy { it.getStringKey() }
+            val otherMap = (otherVal as List<StringKey>).associateBy { it.getStringKey() }
+            val mergedMap = mainMap.toMutableMap()
+            val onlyOtherKeys = otherMap.keys - mainMap.keys
+            val onlyMainKeys = mainMap.keys - otherMap.keys
+            val bothKEys = otherMap.keys - onlyOtherKeys
+            onlyMainKeys.forEach { key ->
+                mergedMap[key] = mainMap[key]!!
+            }
+            onlyOtherKeys.forEach { key ->
+                mergedMap[key] = otherMap[key]!!
+            }
+            bothKEys.forEach { key ->
+                mergedMap[key] = mainMap[key]!!.merge(otherMap[key]!!)
+            }
+            return mergedMap.values.toList()
         }
-        patchedQuest.chapterId.ifIsSet {
-            this.chapterId = it
-        }
-        patchedQuest.type?.let {
-            this.type = it
-        }
-        patchedQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        patchedQuest.repeatable?.let {
-            this.repeatable = it
-        }
-        patchedQuest.recommendedLevel.ifIsSet {
-            this.recommendedLevel = it
-        }
-        patchedQuest.showType?.let {
-            this.showType = it
-        }
-        patchedQuest.activeMode?.let {
-            this.activeMode = it
-        }
-        patchedQuest.mainQuestTag?.let {
-            this.mainQuestTag = it
-        }
-        patchedQuest.suggestTrackOutOfOrder?.let {
-            this.suggestTrackOutOfOrder = it
-        }
-        patchedQuest.suggestTrackMainQuestList?.let {
-            this.suggestTrackMainQuestList = it
-        }
-        patchedQuest.rewardIdList?.let {
-            this.rewardIdList = it
-        }
-        patchedQuest.activityId.ifIsSet {
-            this.activityId = it
-        }
-        patchedQuest.taskId.ifIsSet {
-            this.taskId = it
-        }
-        patchedQuest.videoKey.ifIsSet {
-            this.videoKey = it
-        }
-        patchedQuest.activeMode?.let {
-            this.activeMode = it
-        }
-        patchedQuest.mainQuestTag?.let {
-            this.mainQuestTag = it
-        }
-        patchedQuest.talks?.let {
-            this.talks = it
-        }
-        patchedQuest.titleTextMapHash.ifIsSet {
-            this.titleTextMapHash = it
-        }
-        patchedQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
+
+
+        val newList = mutableListOf<Any>()
+        newList.addAll(mainVal as Collection<Any>)
+        newList.addAll(otherVal as Collection<Any>)
+        return newList
     }
 
-    // subquests
-    private fun PatchedQuest.PatchSubQuest.merge(excelQuest:ExcelSubQuest){
-        excelQuest.order.ifIsSet {
-            this.order = it
-        }
-        excelQuest.isMpBlock?.let {
-            this.isMpBlock = it
-        }
-        excelQuest.isRewind?.let {
-            this.isRewind = it
-        }
-        excelQuest.finishParent?.let {
-            this.finishParent = it
-        }
-        excelQuest.showType?.let {
-            this.showType = it
-        }
-
-        excelQuest.acceptCondComb?.let {
-            this.acceptCondComb = it
-        }
-        excelQuest.acceptCond?.let {
-            this.acceptCond = it
-        }
-        excelQuest.finishCondComb?.let {
-            this.finishCondComb = it
-        }
-        excelQuest.finishCond?.let {
-            this.finishCond = it
-        }
-        excelQuest.failCondComb?.let {
-            this.failCondComb = it
-        }
-        excelQuest.failCond?.let {
-            this.failCond = it
-        }
-
-        excelQuest.beginExec?.let {
-            this.beginExec = it
-        }
-        excelQuest.finishExec?.let {
-            this.finishExec = it
-        }
-        excelQuest.failExec?.let {
-            this.failExec = it
-        }
-        excelQuest.guide?.let {
-            this.guide = it
-        }
-        excelQuest.showGuide?.let {
-            this.showGuide = it
-        }
-        excelQuest.banType?.let {
-            this.banType = it
-        }
-        excelQuest.exclusiveNpcList?.let {
-            this.exclusiveNpcList = it
-        }
-        excelQuest.exclusiveNpcPriority.ifIsSet {
-            this.exclusiveNpcPriority = it
-        }
-        excelQuest.sharedNpcList?.let {
-            this.sharedNpcList = it
-        }
-        excelQuest.trialAvatarList?.let {
-            this.trialAvatarList = it
-        }
-        excelQuest.exclusivePlaceList?.let {
-            this.exclusivePlaceList = it
-        }
-        excelQuest.guide?.let {
-            this.guide = it
-        }
-        excelQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
-        excelQuest.stepDescTextMapHash.ifIsSet {
-            this.stepDescTextMapHash = it
-        }
-        excelQuest.guideTipsTextMapHash.ifIsSet {
-            this.guideTipsTextMapHash = it
-        }
-
-    }
-    private fun PatchedQuest.PatchSubQuest.merge(binoutQuest:BinoutQuest.BinoutSubQuest){
-        binoutQuest.order.ifIsSet {
-            this.order = it
-        }
-        binoutQuest.isMpBlock?.let {
-            this.isMpBlock = it
-        }
-        binoutQuest.showType?.let {
-            this.showType = it
-        }
-        binoutQuest.finishParent?.let {
-            this.finishParent = it
-        }
-        binoutQuest.isRewind?.let {
-            this.isRewind = it
-        }
-        binoutQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        binoutQuest.repeatable?.let {
-            this.repeatable = it
-        }
-        binoutQuest.suggestTrackOutOfOrder?.let {
-            this.suggestTrackOutOfOrder = it
-        }
-        binoutQuest.trialAvatarList?.let {
-            this.trialAvatarList = it
-        }
-        binoutQuest.exclusivePlaceList?.let {
-            this.exclusivePlaceList = it
-        }
-        binoutQuest.versionBegin?.let {
-            this.versionBegin = it
-        }
-        binoutQuest.versionEnd?.let {
-            this.versionEnd = it
-        }
-
-        binoutQuest.acceptCondComb?.let {
-            this.acceptCondComb = it
-        }
-        binoutQuest.acceptCond?.let {
-            this.acceptCond = it
-        }
-        binoutQuest.finishCondComb?.let {
-            this.finishCondComb = it
-        }
-        binoutQuest.finishCond?.let {
-            this.finishCond = it
-        }
-        binoutQuest.failCondComb?.let {
-            this.failCondComb = it
-        }
-        binoutQuest.failCond?.let {
-            this.failCond = it
-        }
-        binoutQuest.beginExec?.let {
-            this.beginExec = it
-        }
-        binoutQuest.finishExec?.let {
-            this.finishExec = it
-        }
-        binoutQuest.failExec?.let {
-            this.failExec = it
-        }
-        binoutQuest.guide?.let {
-            this.guide = it
-        }
-        binoutQuest.showGuide?.let {
-            this.showGuide = it
-        }
-        binoutQuest.banType?.let {
-            this.banType = it
-        }
-        binoutQuest.exclusiveNpcList?.let {
-            this.exclusiveNpcList = it
-        }
-        binoutQuest.exclusiveNpcPriority.ifIsSet {
-            this.exclusiveNpcPriority = it
-        }
-        binoutQuest.sharedNpcList?.let {
-            this.sharedNpcList = it
-        }
-        binoutQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
-        binoutQuest.stepDescTextMapHash.ifIsSet {
-            this.stepDescTextMapHash = it
-        }
-    }
-
-    private fun PatchedQuest.PatchSubQuest.merge(patchSubQuest:PatchedQuest.PatchSubQuest){
-        patchSubQuest.order.ifIsSet {
-            this.order = it
-        }
-        patchSubQuest.isMpBlock?.let {
-            this.isMpBlock = it
-        }
-        patchSubQuest.showType?.let {
-            this.showType = it
-        }
-        patchSubQuest.finishParent?.let {
-            this.finishParent = it
-        }
-        patchSubQuest.isRewind?.let {
-            this.isRewind = it
-        }
-        patchSubQuest.luaPath?.let {
-            this.luaPath = it
-        }
-        patchSubQuest.repeatable?.let {
-            this.repeatable = it
-        }
-        patchSubQuest.suggestTrackOutOfOrder?.let {
-            this.suggestTrackOutOfOrder = it
-        }
-        patchSubQuest.trialAvatarList?.let {
-            this.trialAvatarList = it
-        }
-        patchSubQuest.exclusivePlaceList?.let {
-            this.exclusivePlaceList = it
-        }
-        patchSubQuest.versionBegin?.let {
-            this.versionBegin = it
-        }
-        patchSubQuest.versionEnd?.let {
-            this.versionEnd = it
-        }
-        patchSubQuest.acceptCondComb?.let {
-            this.acceptCondComb = it
-        }
-        patchSubQuest.acceptCond?.let {
-            this.acceptCond = it
-        }
-        patchSubQuest.finishCondComb?.let {
-            this.finishCondComb = it
-        }
-        patchSubQuest.finishCond?.let {
-            this.finishCond = it
-        }
-        patchSubQuest.failCondComb?.let {
-            this.failCondComb = it
-        }
-        patchSubQuest.failCond?.let {
-            this.failCond = it
-        }
-        patchSubQuest.beginExec?.let {
-            this.beginExec = it
-        }
-        patchSubQuest.finishExec?.let {
-            this.finishExec = it
-        }
-        patchSubQuest.failExec?.let {
-            this.failExec = it
-        }
-        patchSubQuest.gainItems?.let {
-            this.gainItems = it
-        }
-        patchSubQuest.guide?.let {
-            this.guide = it
-        }
-        patchSubQuest.showGuide?.let {
-            this.showGuide = it
-        }
-        patchSubQuest.banType?.let {
-            this.banType = it
-        }
-        patchSubQuest.exclusiveNpcList?.let {
-            this.exclusiveNpcList = it
-        }
-        patchSubQuest.exclusiveNpcPriority.ifIsSet {
-            this.exclusiveNpcPriority = it
-        }
-        patchSubQuest.sharedNpcList?.let {
-            this.sharedNpcList = it
-        }
-        patchSubQuest.descTextMapHash.ifIsSet {
-            this.descTextMapHash = it
-        }
-        patchSubQuest.stepDescTextMapHash.ifIsSet {
-            this.stepDescTextMapHash = it
-        }
-    }
-
-    private fun Int.ifIsSet(function:(Int)->Unit){
+    fun Int.ifIsSet(function:(Int)->Unit){
         if(this != -1)
             function.invoke(this)
     }
-    private fun Long.ifIsSet(function:(Long)->Unit){
+    fun Long.ifIsSet(function:(Long)->Unit){
         if(this != -1L)
             function.invoke(this)
     }
 
 
-    fun readExcelSubFile(excelFileName : String) : Map<Int, ExcelSubQuest>? {
+    fun readExcelSubFile(excelFileName : String) : Map<Int, SubQuestData>? {
         val file = File(excelFileName)
         if(!file.exists()){
             return null
         }
 
         val excelText= file.readText()
-        val config = ListSerializer(ExcelSubQuest.serializer())
+        val config = ListSerializer(SubQuestData.serializer())
         return jsonSerializer.decodeFromString(config, excelText).associateBy { it.subId }
     }
 
-    fun readExcelMainFile(excelFileName : String) : Map<Int, ExcelMainQuest>? {
+    fun readExcelMainFile(excelFileName : String) : Map<Int, MainQuestData>? {
         val file = File(excelFileName)
         if(!file.exists()){
             return null
         }
 
         val excelText= file.readText()
-        val config = ListSerializer(ExcelMainQuest.serializer())
+        val config = ListSerializer(MainQuestData.serializer())
         return jsonSerializer.decodeFromString(config, excelText).associateBy { it.id }
     }
 
-    fun readBinoutFiles(binoutFileName: String) : Map<Int, BinoutQuest>? {
-        val config = BinoutQuest.serializer()
+    fun readBinoutFiles(binoutFileName: String) : Map<Int, MainQuestData>? {
+        val config = MainQuestData.serializer()
         return Path(binoutFileName).toFile().listFiles()?.associate{
             val quest = it.inputStream().use { stream ->
                 try {
@@ -643,7 +272,7 @@ object QuestsPatcher {
                 }catch (ex: Throwable){
                     println("error in file ${it.name}")
                     ex.printStackTrace()
-                    BinoutQuest(0)
+                    MainQuestData(0)
                 }
             }
             Pair(quest.id, quest)
@@ -662,19 +291,19 @@ object QuestsPatcher {
         return null
     }
 
-    fun readPatchFiles(patchFolderName:String) : Map<Int, PatchedQuest>?{
-        val config = PatchedQuest.serializer()
-        return Path(patchFolderName).toFile().listFiles()?.associate<File, Int, PatchedQuest> {
+    fun readPatchFiles(patchFolderName:String) : Map<Int, MainQuestData>?{
+        val config = MainQuestData.serializer()
+        return Path(patchFolderName).toFile().listFiles()?.associate<File, Int, MainQuestData> {
             val quest = it.inputStream().use { stream ->
                     try {
                         jsonSerializer.decodeFromStream(config, stream)
                     }catch (ex: Throwable){
                         println("error in file ${it.name}")
                         ex.printStackTrace()
-                        PatchedQuest(0)
+                        MainQuestData(0)
                     }
                 }
-                Pair(quest.mainId, quest)
+                Pair(quest.id, quest)
         }
     }
 }
