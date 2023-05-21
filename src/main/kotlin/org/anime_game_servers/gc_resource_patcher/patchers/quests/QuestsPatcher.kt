@@ -8,6 +8,7 @@ import kotlinx.serialization.json.decodeFromStream
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
 import org.anime_game_servers.gc_resource_patcher.data.quest.*
+import org.anime_game_servers.gc_resource_patcher.patchers.quests.QuestsPatcher.cloneReplacing
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.txt.TxtMainQuest
 import java.io.File
 import kotlin.io.path.Path
@@ -119,9 +120,8 @@ object QuestsPatcher {
                 }
             }
 
-            //TODO cleanup not needed field contents
             subQuestsList.addAll(subQuests.map { it.value.cleanup() })
-            mainQuest = MainQuestData(mainId, subQuests = subQuestsList).merge(mainQuest)
+            mainQuest = mainQuest.cloneReplacing(mapOf("subQuests" to subQuestsList))
             generatedQuests[mainId] = mainQuest
         }
 
@@ -149,26 +149,15 @@ object QuestsPatcher {
             if(it.type!=null) it
             else QuestGuide("QUEST_GUIDE_NONE", param = emptyList())
         } ?: QuestGuide("QUEST_EXEC_UNKNOWN", param = emptyList())
-
-        val propertiesByName = SubQuestData::class.declaredMemberProperties.associateBy { it.name }
-        val primaryConstructor = SubQuestData::class.primaryConstructor ?: throw IllegalArgumentException("merge type must have a primary constructor")
-        val args = primaryConstructor.parameters.associateWith { parameter ->
-            when(parameter.name){
-                "finishCond" -> cleanFinishCond
-                "failCond" -> cleanFailCond
-                "acceptCond" -> cleanAcceptCond
-                "finishExec" -> cleanFinishExec
-                "failExec" -> cleanFailExec
-                "beginExec" -> cleanBeginExec
-                "guide" -> cleanGuide
-                else -> {
-                    val property = propertiesByName[parameter.name]
-                        ?: throw IllegalStateException("no declared member property found with name '${parameter.name}'")
-                    property.get(this)
-                }
-            }
-        }
-        return primaryConstructor.callBy(args)
+        return this.cloneReplacing(mapOf(
+            "finishCond" to cleanFinishCond,
+            "failCond" to cleanFailCond,
+            "acceptCond" to cleanAcceptCond,
+            "finishExec" to cleanFinishExec,
+            "failExec" to cleanFailExec,
+            "beginExec" to cleanBeginExec,
+            "guide" to cleanGuide
+        ))
     }
     inline infix fun <reified T : Any> T.merge(other: T): T {
         var propertiesByName = T::class.declaredMemberProperties.associateBy { it.name }
@@ -201,6 +190,26 @@ object QuestsPatcher {
             } else {
                 println("Unknown non null type ${propertyClass.simpleName}")
                 (property.get(other) ?: property.get(this))
+            }
+        }
+        return primaryConstructor.callBy(args)
+    }
+
+
+    inline infix fun <reified T : Any> T.cloneReplacing(map: Map<String, Any>): T {
+        val propertiesByName = T::class.declaredMemberProperties.associateBy { it.name }
+        val primaryConstructor = T::class.primaryConstructor
+            ?: run {
+                throw IllegalArgumentException("merge type must have a primary constructor ${T::class.simpleName}")
+            }
+        val args = primaryConstructor.parameters.associateWith { parameter ->
+            val property = propertiesByName[parameter.name]
+                ?: throw IllegalStateException("no declared member property found with name '${parameter.name}'")
+
+            if(map.containsKey(parameter.name)){
+                map[parameter.name]
+            } else {
+                property.get(this)
             }
         }
         return primaryConstructor.callBy(args)

@@ -14,8 +14,6 @@ data class SubQuestData(
     val isRewind: Boolean? = null,
 
     val luaPath: String? = null, // binout
-    val repeatable: Boolean? = null, //maybe from main quest
-    val suggestTrackOutOfOrder: Boolean? = null, //maybe from main quest
     val trialAvatarList: List<Int>? = null,
 
     val versionBegin: String? = null,

@@ -46,6 +46,7 @@ data class MainQuestData(
     // only binout and patched
     val subQuests: List<SubQuestData>? = null,
     val talks: List<TalkData>? = null,
+    val preloadLuaList : List<Long>? = null
 ): IntKey{
     override fun getIntKey() = id
 }
