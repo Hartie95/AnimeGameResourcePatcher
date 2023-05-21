@@ -7,8 +7,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
-import org.anime_game_servers.gc_resource_patcher.data.quest.MainQuestData
-import org.anime_game_servers.gc_resource_patcher.data.quest.SubQuestData
+import org.anime_game_servers.gc_resource_patcher.data.quest.*
 import org.anime_game_servers.gc_resource_patcher.patchers.quests.txt.TxtMainQuest
 import java.io.File
 import kotlin.io.path.Path
@@ -87,13 +86,13 @@ object QuestsPatcher {
             var mainQuest = MainQuestData(mainId, subQuests = subQuestsList)
             val subQuests = mutableMapOf<Int, SubQuestData>()
             mainSubIds[mainId]?.forEach { subId->
-                val subQuest = SubQuestData(subId, mainId)
+                var subQuest = SubQuestData(subId, mainId)
 
                 excelSubQuestsOld?.get(subId)?.let {
-                    subQuest.merge(it)
+                    subQuest = subQuest.merge(it)
                 }
                 excelSubQuests?.get(subId)?.let {
-                    subQuest.merge(it)
+                    subQuest = subQuest.merge(it)
                 }
 
                 subQuests[subId]=subQuest
@@ -109,18 +108,20 @@ object QuestsPatcher {
             binoutQuests?.get(mainId)?.let {
                 mainQuest = mainQuest.merge(it)
                 it.subQuests?.forEach { subQuest ->
-                    subQuests[subQuest.subId]?.merge(subQuest)
+                    subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
                 }
             }
 
             questsPatches?.get(mainId)?.let {
                 mainQuest = mainQuest.merge(it)
                 it.subQuests?.forEach { subQuest ->
-                    subQuests[subQuest.subId]?.merge(subQuest)
+                    subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
                 }
             }
 
-            subQuestsList.addAll(subQuests.map { it.value })
+            //TODO cleanup not needed field contents
+            subQuestsList.addAll(subQuests.map { it.value.cleanup() })
+            mainQuest = MainQuestData(mainId, subQuests = subQuestsList).merge(mainQuest)
             generatedQuests[mainId] = mainQuest
         }
 
@@ -128,6 +129,46 @@ object QuestsPatcher {
             //println(value.toString())
             File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(MainQuestData.serializer(), value))
         }
+    }
+
+    private fun SubQuestData.cleanup() : SubQuestData{
+        val cleanFinishCond = finishCond?.filter { it.type != null }
+            ?: listOf(QuestCondition("QUEST_CONTENT_UNKNOWN", param = emptyList()))
+        val cleanFailCond = failCond?.filter { it.type != null }
+            ?: listOf(QuestCondition("QUEST_CONTENT_UNKNOWN", param = emptyList()))
+        val cleanAcceptCond = acceptCond?.filter { it.type != null }
+            ?: listOf(QuestCondition("QUEST_COND_UNKNOWN", param = emptyList()))
+
+        val cleanFinishExec: List<QuestExec> = finishExec?.filter { it.type != null }
+            ?: listOf(QuestExec("QUEST_EXEC_UNKNOWN", param = emptyList()))
+        val cleanFailExec: List<QuestExec> = failExec?.filter { it.type != null }
+            ?: listOf(QuestExec("QUEST_EXEC_UNKNOWN", param = emptyList()))
+        val cleanBeginExec: List<QuestExec> = beginExec?.filter { it.type != null }
+            ?: listOf(QuestExec("QUEST_EXEC_UNKNOWN", param = emptyList()))
+        val cleanGuide: QuestGuide = guide?.let {
+            if(it.type!=null) it
+            else QuestGuide("QUEST_GUIDE_NONE", param = emptyList())
+        } ?: QuestGuide("QUEST_EXEC_UNKNOWN", param = emptyList())
+
+        val propertiesByName = SubQuestData::class.declaredMemberProperties.associateBy { it.name }
+        val primaryConstructor = SubQuestData::class.primaryConstructor ?: throw IllegalArgumentException("merge type must have a primary constructor")
+        val args = primaryConstructor.parameters.associateWith { parameter ->
+            when(parameter.name){
+                "finishCond" -> cleanFinishCond
+                "failCond" -> cleanFailCond
+                "acceptCond" -> cleanAcceptCond
+                "finishExec" -> cleanFinishExec
+                "failExec" -> cleanFailExec
+                "beginExec" -> cleanBeginExec
+                "guide" -> cleanGuide
+                else -> {
+                    val property = propertiesByName[parameter.name]
+                        ?: throw IllegalStateException("no declared member property found with name '${parameter.name}'")
+                    property.get(this)
+                }
+            }
+        }
+        return primaryConstructor.callBy(args)
     }
     inline infix fun <reified T : Any> T.merge(other: T): T {
         var propertiesByName = T::class.declaredMemberProperties.associateBy { it.name }
@@ -153,6 +194,8 @@ object QuestsPatcher {
                 getIntValue(property as KProperty1<T, Int>, other, this)
             else if(propertyClass == Long::class)
                 getLongValue(property as KProperty1<T, Long>, other, this)
+            else if(propertyClass == String::class)
+                getStringValue(property as KProperty1<T, String?>, other, this)
             else if(isNulleable){
                 (property.get(other) ?: property.get(this))
             } else {
@@ -176,6 +219,14 @@ object QuestsPatcher {
             return otherVal
         return property.get(main)
     }
+    fun <T : Any> getStringValue(property:KProperty1<T, String?>,other: T, main: T): String?{
+        val mainVal = property.get(main)?.let { if(it.isBlank()) null else it }
+        val otherVal = property.get(other)?.let { if(it.isBlank()) null else it }
+        if(otherVal!=null){
+            return otherVal
+        }
+        return mainVal
+    }
     fun <T : Any> getListValue(property:KProperty1<T, List<*>>,other: T, main: T): List<*>?{
         val mainVal = property.get(main)
         val otherVal = property.get(other)
@@ -187,38 +238,36 @@ object QuestsPatcher {
         //TODO merge logic
         val listType = property.returnType.arguments.get(0).type
         if(listType!=null && listType.isSubtypeOf(IntKey::class.starProjectedType)){
-            //TODO merge each element
             val mainMap = (mainVal as List<IntKey>).associateBy { it.getIntKey() }
             val otherMap = (otherVal as List<IntKey>).associateBy { it.getIntKey() }
             val mergedMap = mainMap.toMutableMap()
             val onlyOtherKeys = otherMap.keys - mainMap.keys
             val onlyMainKeys = mainMap.keys - otherMap.keys
-            val bothKEys = otherMap.keys - onlyOtherKeys
+            val bothKeys = otherMap.keys - onlyOtherKeys
             onlyMainKeys.forEach { key ->
                 mergedMap[key] = mainMap[key]!!
             }
             onlyOtherKeys.forEach { key ->
                 mergedMap[key] = otherMap[key]!!
             }
-            bothKEys.forEach { key ->
+            bothKeys.forEach { key ->
                 mergedMap[key] = mainMap[key]!!.merge(otherMap[key]!!)
             }
             return mergedMap.values.toList()
         } else if(listType!=null && listType.isSubtypeOf(StringKey::class.starProjectedType)) {
-            //TODO merge each element
             val mainMap = (mainVal as List<StringKey>).associateBy { it.getStringKey() }
             val otherMap = (otherVal as List<StringKey>).associateBy { it.getStringKey() }
             val mergedMap = mainMap.toMutableMap()
             val onlyOtherKeys = otherMap.keys - mainMap.keys
             val onlyMainKeys = mainMap.keys - otherMap.keys
-            val bothKEys = otherMap.keys - onlyOtherKeys
+            val bothKeys = otherMap.keys - onlyOtherKeys
             onlyMainKeys.forEach { key ->
                 mergedMap[key] = mainMap[key]!!
             }
             onlyOtherKeys.forEach { key ->
                 mergedMap[key] = otherMap[key]!!
             }
-            bothKEys.forEach { key ->
+            bothKeys.forEach { key ->
                 mergedMap[key] = mainMap[key]!!.merge(otherMap[key]!!)
             }
             return mergedMap.values.toList()
