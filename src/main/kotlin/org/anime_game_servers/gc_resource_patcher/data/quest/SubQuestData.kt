@@ -8,9 +8,12 @@ data class SubQuestData(
     val subId: Int,
     val mainId: Int,
     val order: Int = -1,
+    val subIdSet: Int = -1,
     val isMpBlock: Boolean? = null,
     val showType: String? = null,
+    val failParentShow: String? = null,
     val finishParent: Boolean? = null,
+    val failParent: Boolean? = null,
     val isRewind: Boolean? = null,
 
     val luaPath: String? = null, // binout
@@ -44,6 +47,7 @@ data class SubQuestData(
     // Textmaps
     val descTextMapHash: Long = -1,
     val stepDescTextMapHash: Long = -1,
+    val guideTipsTextMapHash: Long = -1,
 
     //custom elements
     var gainItems: List<GainItem>? = null,

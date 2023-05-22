@@ -14,7 +14,9 @@ data class QuestCondition(
     @JsonNames("param_str", "_param_str")
     val paramString: String? = null,
     @JsonNames("param", "_param")
-    val param: List<Int>? = null
+    val param: List<Int>? = null,
+    @JsonNames("count", "_count")
+    val count: Int = -1
 ) : StringKey {
     override fun getStringKey() = (type ?: "")+(param?.getOrNull(0) ?: "")
 }
@@ -37,7 +39,8 @@ data class QuestGuide(
     val param: List<String>? = null,
     val guideScene: Int = -1,
     val guideStyle: String? = null,
-    val guideLayer: String? = null
+    val guideLayer: String? = null,
+    val autoGuide: String? = null,
 )
 
 @Serializable

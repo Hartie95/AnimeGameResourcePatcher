@@ -28,7 +28,7 @@ data class TalkData(
     val priority: Int = -1,
     @JsonNames("initDialog", "_initDialog")
     val initDialog: Int = -1,
-    @JsonNames("npcIds", "_npcId")
+    @JsonNames("npcIds", "_npcId", "npcId")
     val npcIds: List<Int>? = null,
     @JsonNames("performCfg", "_performCfg")
     val performCfg: String? = null,
@@ -52,8 +52,24 @@ data class TalkData(
     @JsonNames("finishExec", "_finishExec")
     val finishExec: List<TalkExec>? = null,
 
+    @JsonNames("talkMarkType", "_talkMarkType")
+    val talkMarkType: String? = null,
+    @JsonNames("enableCameraDisplacement", "_enableCameraDisplacement")
+    val enableCameraDisplacement: Boolean? = null,
+    @JsonNames("stayFreeStyle", "_stayFreeStyle")
+    val stayFreeStyle: Boolean? = null,
+    @JsonNames("questIdleTalk", "_questIdleTalk")
+    val questIdleTalk: Boolean? = null,
+    @JsonNames("lowPriority", "_lowPriority")
+    val lowPriority: Boolean? = null,
+    @JsonNames("dontBlockDaily", "_dontBlockDaily")
+    val dontBlockDaily: Boolean? = null,
+
     // binout only:
     val assetIndex: Long = -1,
+
+    // binout unknown (3.2)
+    //val CIAAAKHILBD: List<Int>? = null,
 
     // excel only
     @JsonNames("talkMarkHideList", "_talkMarkHideList") // quests in talks with this set don't exist in binout
@@ -69,6 +85,6 @@ data class TalkData(
 data class BeginCond(
     @JsonNames("type", "_type")
     val type: String? = null,
-    @JsonNames("params", "_params")
+    @JsonNames("params", "_params", "_param")
     val params: List<String>? = null
 )

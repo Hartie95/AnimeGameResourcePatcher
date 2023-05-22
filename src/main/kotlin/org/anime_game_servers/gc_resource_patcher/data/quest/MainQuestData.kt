@@ -46,7 +46,17 @@ data class MainQuestData(
     // only binout and patched
     val subQuests: List<SubQuestData>? = null,
     val talks: List<TalkData>? = null,
-    val preloadLuaList : List<Long>? = null
+    val preloadLuaList : List<Long>? = null,
+    val forcePreloadLuaList : List<Long>? = null,
+    val freeStyleDic: Map<String, List<Int>>? = null,
+
+    //TODO find content (3.2) first json value is MainQuestExcel, second is binout/Quest
+    /*@JsonNames("KIODJCKJHHB", "EHPHJCINDBL")
+    val KIODJCKJHHB: List<Int>? = null,
+    @JsonNames("BJOJMLDHIGH", "DJKNKGBBFEH")
+    val BJOJMLDHIGH: List<Int>? = null,
+    @JsonNames("DDPIINIHIIP", "NNIEFFEDHHH")
+    val DDPIINIHIIP: Int = -1,*/
 ): IntKey{
     override fun getIntKey() = id
 }
