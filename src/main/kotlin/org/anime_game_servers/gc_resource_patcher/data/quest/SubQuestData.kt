@@ -1,6 +1,10 @@
 package org.anime_game_servers.gc_resource_patcher.data.quest
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import org.anime_game_servers.gc_resource_patcher.data.general.LogicType
+import org.anime_game_servers.gc_resource_patcher.data.helpers.nullableEnumValueOfOrDefault
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
 
 @Serializable
@@ -23,11 +27,20 @@ data class SubQuestData(
     val versionEnd: String? = null,
 
     // quest conditions
-    val acceptCondComb: String? = null,
+    @SerialName("acceptCondComb")
+    val acceptCondCombString: String? = null,
+    @Transient
+    val acceptCondComb: LogicType? = nullableEnumValueOfOrDefault(acceptCondCombString, LogicType.LOGIC_UNKNOWN),
     val acceptCond: List<QuestCondition>? = null,
-    val finishCondComb: String? = null,
+    @SerialName("finishCondComb")
+    val finishCondCombString: String? = null,
+    @Transient
+    val finishCondComb: LogicType? = nullableEnumValueOfOrDefault(finishCondCombString, LogicType.LOGIC_UNKNOWN),
     val finishCond: List<QuestCondition>? = null,
-    val failCondComb: String? = null,
+    @SerialName("failCondComb")
+    val failCondCombString: String? = null,
+    @Transient
+    val failCondComb: LogicType? = nullableEnumValueOfOrDefault(failCondCombString, LogicType.LOGIC_UNKNOWN),
     val failCond: List<QuestCondition>? = null,
 
 
