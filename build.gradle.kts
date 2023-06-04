@@ -1,11 +1,14 @@
+
 plugins {
-    kotlin("jvm") version "1.8.21"
-    kotlin("plugin.serialization") version "1.8.21"
+    val kotlinVersion = "1.8.21"
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.serialization") version kotlinVersion
     application
 }
 
 group = "org.anime_game_servers.gc_patcher"
 version = "1.0-SNAPSHOT"
+val kotlinVersion = "1.8.21"
 
 repositories {
     mavenCentral()
@@ -16,7 +19,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation("app.softwork:kotlinx-serialization-csv:0.0.13")
 
-    implementation("org.jetbrains.kotlin:kotlin-reflect:1.8.21")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
 }
 
 tasks.test {

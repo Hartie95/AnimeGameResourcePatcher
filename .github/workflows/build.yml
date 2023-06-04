@@ -1,0 +1,41 @@
+name: "Build"
+on:
+  workflow_dispatch: ~
+  push:
+    paths:
+      - "**.kt"
+      - "**.kts"
+      - "gradle/wrapper/gradle-wrapper.properties"
+    branches:
+      - "main"
+      - "development"
+  pull_request:
+    paths:
+      - "**.kt"
+      - "**.kts"
+    types:
+      - opened
+      - synchronize
+      - reopened
+jobs:
+  Build-Server-Jar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@ccb4328a959376b642e027874838f60f8e596de3
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@749f47bda3e44aa060e82d7b3ef7e40d953bd629
+        with:
+          arguments: jar
+      - name: Upload build
+        uses: actions/upload-artifact@v3
+        with:
+          name: ResourcePatcher
+          path: build/libs/*.jar
