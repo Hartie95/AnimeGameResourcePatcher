@@ -50,7 +50,7 @@ enum class ActivityCondition(val id: Int) : IntKey {
     NEW_ACTIVITY_COND_SALESMAN_CAN_GET_REWARD(9),
     NEW_ACTIVITY_COND_ASTER_MID_CAMP_REFRESHABLE(10),
     /**
-     * Checks if certain watcheres are completed
+     * Checks if certain watchers are completed
      * param: list of watcher ids to check
      */
     NEW_ACTIVITY_COND_FINISH_WATCHER(11),

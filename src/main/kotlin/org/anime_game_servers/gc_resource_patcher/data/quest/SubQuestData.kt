@@ -36,12 +36,12 @@ data class SubQuestData(
     val finishCondCombString: String? = null,
     @Transient
     val finishCondComb: LogicType? = nullableEnumValueOfOrDefault(finishCondCombString, LogicType.LOGIC_UNKNOWN),
-    val finishCond: List<QuestCondition>? = null,
+    val finishCond: List<QuestContent>? = null,
     @SerialName("failCondComb")
     val failCondCombString: String? = null,
     @Transient
     val failCondComb: LogicType? = nullableEnumValueOfOrDefault(failCondCombString, LogicType.LOGIC_UNKNOWN),
-    val failCond: List<QuestCondition>? = null,
+    val failCond: List<QuestContent>? = null,
 
 
     // quest execs
