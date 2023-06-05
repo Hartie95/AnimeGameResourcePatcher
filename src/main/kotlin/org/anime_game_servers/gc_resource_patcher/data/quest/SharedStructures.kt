@@ -1,6 +1,7 @@
 package org.anime_game_servers.gc_resource_patcher.data.quest
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlinx.serialization.json.JsonNames
@@ -11,6 +12,7 @@ import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
 data class QuestContent(
+    @SerialName("type")
     @JsonNames("type", "_type")
     val typeString: String? = null,
     @Transient
@@ -27,6 +29,7 @@ data class QuestContent(
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
 data class QuestCondition(
+    @SerialName("type")
     @JsonNames("type", "_type")
     val typeString: String? = null,
     @Transient
@@ -40,6 +43,7 @@ data class QuestCondition(
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
 data class QuestExec(
+    @SerialName("type")
     @JsonNames("type", "_type")
     val typeString: String? = null,
     @Transient
@@ -51,6 +55,7 @@ data class QuestExec(
 @Serializable
 @OptIn(ExperimentalSerializationApi::class)
 data class QuestGuide(
+    @SerialName("type")
     @JsonNames("type", "_type")
     val typeString: String? = null,
     @Transient
