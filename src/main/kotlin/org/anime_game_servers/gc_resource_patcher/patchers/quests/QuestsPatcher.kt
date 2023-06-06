@@ -1,6 +1,6 @@
 package org.anime_game_servers.gc_resource_patcher.patchers.quests
 
-import app.softwork.serialization.csv.CSVFormat
+import SerializationOptions
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -8,10 +8,8 @@ import kotlinx.serialization.json.decodeFromStream
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.IntKey
 import org.anime_game_servers.gc_resource_patcher.data.interfaces.StringKey
 import org.anime_game_servers.gc_resource_patcher.data.quest.*
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.QuestsPatcher.cloneReplacing
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.txt.TxtMainQuest
 import java.io.File
-import kotlin.io.path.Path
+import java.nio.file.Path
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
@@ -20,64 +18,120 @@ import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.full.starProjectedType
 
 @OptIn(ExperimentalSerializationApi::class)
-object QuestsPatcher {
-    const val excelSubFileName : String = "ExcelBinOutput/QuestExcelConfigData.json"
-    const val oldExcelSubFileName : String = "ExcelBinOutput/QuestExcelConfigData.old.json"
-    const val excelMainFileName : String = "ExcelBinOutput/MainQuestExcelConfigData.json"
+class QuestsPatcher(serializationOptions: SerializationOptions){
+    companion object {
+        const val excelSubFileName : String = "ExcelBinOutput/QuestExcelConfigData.json"
+        const val oldExcelSubFileName : String = "ExcelBinOutput/QuestExcelConfigData.old.json"
+        const val excelMainFileName : String = "ExcelBinOutput/MainQuestExcelConfigData.json"
 
-    const val txtMainFileName = "txt/MainQuestData.txt"
+        const val txtMainFileName = "txt/MainQuestData.txt"
 
-    const val binoutFolder = "BinOutput/Quest/"
+        const val binoutFolder = "BinOutput/Quest/"
 
-    const val patchFolder = "Patches/Quest/"
-    const val outputFolder = "Generated/Quest/"
+        const val patchFolder = "Patches/Quest/"
+        const val outputFolder = "Generated/Quest/"
+    }
 
-    private val jsonSerializer = Json { ignoreUnknownKeys = true }
-    private val txtSerializer = CSVFormat(separator = "\t")
 
-    fun patch() {
-        val excelSubQuests = readExcelSubFile(excelSubFileName)
-        val excelSubQuestsOld = readExcelSubFile(oldExcelSubFileName)
+    private val jsonSerializer = Json { ignoreUnknownKeys = !serializationOptions.strictParsing;
+        prettyPrint = serializationOptions.usePrettyPrint
+    }
 
-        val excelMainQuests = readExcelMainFile(excelMainFileName)
-        val txtMainQuests = readTxtMainQuests(txtMainFileName)
+    fun patch(resourcesBaseDir:Path, patchesBaseDir:Set<Path>? = null,
+              subExcelFiles: Set<File>?=null, mainExcelFiles: Set<File>?=null,
+              addBinoutDir: Set<Path>?=null, addPatchesDir: Set<Path>?=null
+    ) {
+        val excelSubQuestsFiles: MutableSet<File> = mutableSetOf()
+        val excelMainQuestsFiles: MutableSet<File> = mutableSetOf()
+        val binoutDirs: MutableSet<Path> = mutableSetOf()
+        val patchDirs: MutableSet<Path> = mutableSetOf()
 
-        val binoutQuests = readBinoutFiles(binoutFolder)
-        val questsPatches = readPatchFiles(patchFolder)
+        resourcesBaseDir.let {
+            excelSubQuestsFiles += it.resolve(excelSubFileName).toFile()
+            excelMainQuestsFiles += it.resolve(excelMainFileName).toFile()
+            binoutDirs.add(it.resolve(binoutFolder))
+            patchDirs.add(it.resolve(patchFolder))
+        }
+        subExcelFiles?.let {
+            excelSubQuestsFiles += it
+        }
+        mainExcelFiles?.let {
+            excelMainQuestsFiles += it
+        }
+        addBinoutDir?.let {
+            binoutDirs += it
+        }
+        patchesBaseDir?.forEach {
+            patchDirs.add(it.resolve(patchFolder))
+        }
+        addPatchesDir?.let {
+            patchDirs += it
+        }
+
+        val excelSubQuestsMapList = mutableListOf<Map<Int, SubQuestData>>()
+        val excelMainQuestsMapList = mutableListOf<Map<Int, MainQuestData>>()
+        val binoutQuestsList = mutableListOf<Map<Int, MainQuestData>>()
+        val questsPatchesList = mutableListOf<Map<Int, MainQuestData>>()
+
+
+        excelSubQuestsFiles.forEach {
+            readExcelSubFile(it)?.let {
+                excelSubQuestsMapList.add(it)
+            }
+        }
+
+        excelMainQuestsFiles.forEach {
+            readExcelMainFile(it)?.let {
+                excelMainQuestsMapList.add(it)
+            }
+        }
+
+        binoutDirs.forEach {
+            readBinoutFiles(it)?.let {
+                binoutQuestsList.add(it)
+            }
+        }
+
+        patchDirs.forEach {
+            readPatchFiles(it)?.let {
+                questsPatchesList.add(it)
+            }
+        }
 
         val mainIds = mutableSetOf<Int>()
         val subIds = mutableSetOf<Int>()
         val mainSubIds = mutableMapOf<Int, MutableSet<Int>>()
 
-        excelMainQuests?.forEach { (key, value) ->
-            mainIds+= key
-        }
-        txtMainQuests?.forEach { (key, value) ->
-            mainIds+= key
-        }
-        binoutQuests?.forEach { (key, value) ->
-            mainIds+= key
-            value.subQuests?.forEach { subQuest ->
-                subIds+=subQuest.subId
-                mainSubIds.getOrPut(subQuest.mainId) { mutableSetOf() }+=subQuest.subId
+        excelMainQuestsMapList.forEach { map ->
+            map.keys.forEach { key ->
+                mainIds += key
             }
         }
-        questsPatches?.forEach { (key, value) ->
-            mainIds+= key
-            value.subQuests?.forEach { subQuest ->
-                subIds+=subQuest.subId
-                mainSubIds.getOrPut(subQuest.mainId) { mutableSetOf() }+=subQuest.subId
+        binoutQuestsList.forEach {
+            it.forEach { (key, value) ->
+                mainIds += key
+                value.subQuests?.forEach { subQuest ->
+                    subIds += subQuest.subId
+                    mainSubIds.getOrPut(subQuest.mainId) { mutableSetOf() } += subQuest.subId
+                }
             }
         }
-        excelSubQuests?.forEach { (key, value) ->
-            subIds += key
-            mainIds += value.mainId
-            mainSubIds.getOrPut(value.mainId) { mutableSetOf() }+=key
+
+        questsPatchesList.forEach { patchMap ->
+            patchMap.forEach { (key, value) ->
+                mainIds += key
+                value.subQuests?.forEach { subQuest ->
+                    subIds += subQuest.subId
+                    mainSubIds.getOrPut(subQuest.mainId) { mutableSetOf() } += subQuest.subId
+                }
+            }
         }
-        excelSubQuestsOld?.forEach { (key, value) ->
-            subIds += key
-            mainIds += value.mainId
-            mainSubIds.getOrPut(value.mainId) { mutableSetOf() }+=key
+        excelSubQuestsMapList.forEach { subQuestMap ->
+            subQuestMap.forEach { (key, value) ->
+                subIds += key
+                mainIds += value.mainId
+                mainSubIds.getOrPut(value.mainId) { mutableSetOf() } += key
+            }
         }
 
         val generatedQuests = mutableMapOf<Int, MainQuestData>()
@@ -88,35 +142,37 @@ object QuestsPatcher {
             val subQuests = mutableMapOf<Int, SubQuestData>()
             mainSubIds[mainId]?.forEach { subId->
                 var subQuest = SubQuestData(subId, mainId)
-
-                excelSubQuestsOld?.get(subId)?.let {
-                    subQuest = subQuest.merge(it)
+                excelSubQuestsMapList.forEach { subMap ->
+                    subMap[subId]?.let {
+                        subQuest = subQuest.merge(it)
+                    }
                 }
-                excelSubQuests?.get(subId)?.let {
-                    subQuest = subQuest.merge(it)
-                }
-
                 subQuests[subId]=subQuest
             }
-            excelMainQuests?.get(mainId)?.let {
-                mainQuest = mainQuest merge it
+            excelMainQuestsMapList.forEach {mainMap->
+                mainMap.get(mainId)?.let{
+                    mainQuest = mainQuest merge it
+                }
             }
             /*txtMainQuests?.get(mainId)?.let {
                 mainQuest = mainQuest.merge(it)
             }*/
 
 
-            binoutQuests?.get(mainId)?.let {
-                mainQuest = mainQuest.merge(it)
-                it.subQuests?.forEach { subQuest ->
-                    subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
+            binoutQuestsList.forEach { binoutMap ->
+                binoutMap.get(mainId)?.let {
+                    mainQuest = mainQuest.merge(it)
+                    it.subQuests?.forEach { subQuest ->
+                        subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
+                    }
                 }
             }
-
-            questsPatches?.get(mainId)?.let {
-                mainQuest = mainQuest.merge(it)
-                it.subQuests?.forEach { subQuest ->
-                    subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
+            questsPatchesList.forEach { patchMap ->
+                patchMap.get(mainId)?.let {
+                    mainQuest = mainQuest.merge(it)
+                    it.subQuests?.forEach { subQuest ->
+                        subQuests[subQuest.subId] = subQuests[subQuest.subId]?.merge(subQuest) ?: subQuest
+                    }
                 }
             }
 
@@ -125,9 +181,12 @@ object QuestsPatcher {
             generatedQuests[mainId] = mainQuest
         }
 
+        val targetDir = resourcesBaseDir.resolve(outputFolder).toFile()
+        targetDir.mkdirs()
+
         generatedQuests.forEach { (key, value) ->
             //println(value.toString())
-            File("$outputFolder$key.json").writeText(jsonSerializer.encodeToString(MainQuestData.serializer(), value))
+            File(targetDir, "$key.json").writeText(jsonSerializer.encodeToString(MainQuestData.serializer(), value))
         }
     }
 
@@ -300,8 +359,7 @@ object QuestsPatcher {
     }
 
 
-    fun readExcelSubFile(excelFileName : String) : Map<Int, SubQuestData>? {
-        val file = File(excelFileName)
+    fun readExcelSubFile(file : File) : Map<Int, SubQuestData>? {
         if(!file.exists()){
             return null
         }
@@ -311,8 +369,7 @@ object QuestsPatcher {
         return jsonSerializer.decodeFromString(config, excelText).associateBy { it.subId }
     }
 
-    fun readExcelMainFile(excelFileName : String) : Map<Int, MainQuestData>? {
-        val file = File(excelFileName)
+    fun readExcelMainFile(file : File) : Map<Int, MainQuestData>? {
         if(!file.exists()){
             return null
         }
@@ -322,9 +379,9 @@ object QuestsPatcher {
         return jsonSerializer.decodeFromString(config, excelText).associateBy { it.id }
     }
 
-    fun readBinoutFiles(binoutFileName: String) : Map<Int, MainQuestData>? {
+    fun readBinoutFiles(binoutFileName: Path) : Map<Int, MainQuestData>? {
         val config = MainQuestData.serializer()
-        return Path(binoutFileName).toFile().listFiles()?.associate{
+        return binoutFileName.toFile().listFiles()?.associate{
             val quest = it.inputStream().use { stream ->
                 try {
                     jsonSerializer.decodeFromStream(config, stream)
@@ -337,22 +394,9 @@ object QuestsPatcher {
             Pair(quest.id, quest)
         }
     }
-
-    fun readTxtMainQuests(txtFileName:String): Map<Int, TxtMainQuest>?{
-        val file = File(txtFileName)
-        if(!file.exists()){
-            return null
-        }
-
-        val excelText= file.readText()
-        val config = ListSerializer(TxtMainQuest.serializer())
-        //return txtSerializer.decodeFromString(config, excelText).associateBy { it.mainId }
-        return null
-    }
-
-    fun readPatchFiles(patchFolderName:String) : Map<Int, MainQuestData>?{
+    fun readPatchFiles(patchFolderName:Path) : Map<Int, MainQuestData>?{
         val config = MainQuestData.serializer()
-        return Path(patchFolderName).toFile().listFiles()?.associate<File, Int, MainQuestData> {
+        return patchFolderName.toFile().listFiles()?.associate<File, Int, MainQuestData> {
             val quest = it.inputStream().use { stream ->
                     try {
                         jsonSerializer.decodeFromStream(config, stream)

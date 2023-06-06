@@ -3,6 +3,7 @@ plugins {
     val kotlinVersion = "1.8.21"
     kotlin("jvm") version kotlinVersion
     kotlin("plugin.serialization") version kotlinVersion
+    id("org.jetbrains.dokka") version "1.8.10"
     application
 }
 
@@ -20,6 +21,7 @@ dependencies {
     implementation("app.softwork:kotlinx-serialization-csv:0.0.13")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+    implementation("com.github.ajalt.clikt:clikt:3.5.2")
 }
 
 tasks.test {
