@@ -12,13 +12,14 @@ version = "1.0-SNAPSHOT"
 val kotlinVersion = "1.8.21"
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.anime_game_servers:AnimeGameDataModels-jvm:0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
-    implementation("app.softwork:kotlinx-serialization-csv:0.0.13")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
     implementation("com.github.ajalt.clikt:clikt:3.5.2")

@@ -1,8 +1,10 @@
+import com.github.ajalt.clikt.completion.CompletionCommand
 import com.github.ajalt.clikt.core.*
 import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.path
-import org.anime_game_servers.gc_resource_patcher.patchers.quests.QuestsPatcher
+import patchers.ActivityPatcher
+import patchers.QuestsPatcher
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -22,6 +24,7 @@ data class SerializationOptions(
     val usePrettyPrint: Boolean,
     val strictParsing: Boolean
 )
+
 class Patch : CliktCommand(help = "Generates the patched resources") {
     val resourcesBaseDir by option(help = "The Resources directory").path(mustExist = true, canBeFile = false)
         .default(Paths.get("").toAbsolutePath())
@@ -31,6 +34,10 @@ class Patch : CliktCommand(help = "Generates the patched resources") {
     val strictParsing by option(help = "stricter json parsing, so for example unknown fields will throw an error").flag(
         default = false
     )
+
+    init {
+        subcommands(CompletionCommand())
+    }
 
 
     val baseOptions by findOrSetObject {
@@ -79,6 +86,11 @@ class All : CliktCommand(help = "Generates all patched resources") {
         echo("generating all patches")
         echo("generating patched quests")
         QuestsPatcher(baseOptions.serialisationOptions)
+            .patch(
+                resourcesBaseDir = baseOptions.resourcesBaseDir,
+                patchesBaseDir = baseOptions.patchBaseDir,
+            )
+        ActivityPatcher(baseOptions.serialisationOptions)
             .patch(
                 resourcesBaseDir = baseOptions.resourcesBaseDir,
                 patchesBaseDir = baseOptions.patchBaseDir,
