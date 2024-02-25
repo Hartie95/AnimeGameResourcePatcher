@@ -192,9 +192,9 @@ class QuestsPatcher(serializationOptions: SerializationOptions){
 
     private fun SubQuestData.cleanup() : SubQuestData{
         val cleanFinishCond = finishCond?.filter { it.type != null }
-            ?: listOf(QuestCondition("QUEST_CONTENT_UNKNOWN", param = emptyList()))
+            ?: listOf(QuestContent("QUEST_CONTENT_UNKNOWN", param = emptyList()))
         val cleanFailCond = failCond?.filter { it.type != null }
-            ?: listOf(QuestCondition("QUEST_CONTENT_UNKNOWN", param = emptyList()))
+            ?: listOf(QuestContent("QUEST_CONTENT_UNKNOWN", param = emptyList()))
         val cleanAcceptCond = acceptCond?.filter { it.type != null }
             ?: listOf(QuestCondition("QUEST_COND_UNKNOWN", param = emptyList()))
 
